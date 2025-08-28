@@ -19,7 +19,6 @@ app.post("/zero-shot", async (req, res) => {
       return res.status(400).json({ error: "Please provide userIdea" });
     }
 
-    // Get Gemini model
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     // Zero-shot = no examples, just an instruction
@@ -27,10 +26,8 @@ app.post("/zero-shot", async (req, res) => {
     Cover feasibility, potential competitors, and a basic execution roadmap.
     Startup Idea: ${userIdea}`;
 
-    // Call Gemini API
     const result = await model.generateContent(prompt);
 
-    // Return response
     res.json({
       idea: userIdea,
       zero_shot_response: result.response.text(),
@@ -42,6 +39,44 @@ app.post("/zero-shot", async (req, res) => {
   }
 });
 
-// Start server
+// ================== ONE SHOT PROMPTING ==================
+app.post("/one-shot", async (req, res) => {
+  try {
+    const { userIdea } = req.body;
+
+    if (!userIdea) {
+      return res.status(400).json({ error: "Please provide userIdea" });
+    }
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    // One-shot = provide ONE example to guide the format
+    const prompt = `
+Example:
+Input: "AI-powered fitness tracker for pets"
+Output:
+Validation: Feasible, growing demand in pet tech
+Competitors: FitBark, Whistle
+Roadmap: Build MVP collar device → Launch beta → Partner with vets
+
+Now analyze the following startup idea in the same format:
+Input: "${userIdea}"
+Output:
+    `;
+
+    const result = await model.generateContent(prompt);
+
+    res.json({
+      idea: userIdea,
+      one_shot_response: result.response.text(),
+    });
+
+  } catch (err) {
+    console.error("Error in One Shot:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ================== START SERVER ==================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`✅ Innopilot running on port ${PORT}`));
