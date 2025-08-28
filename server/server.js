@@ -15,23 +15,16 @@ app.post("/zero-shot", async (req, res) => {
   try {
     const { userIdea } = req.body;
 
-    if (!userIdea) {
-      return res.status(400).json({ error: "Please provide userIdea" });
-    }
+    if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
     const prompt = `Validate this startup idea in detail. 
     Cover feasibility, potential competitors, and a basic execution roadmap.
     Startup Idea: ${userIdea}`;
 
     const result = await model.generateContent(prompt);
 
-    res.json({
-      idea: userIdea,
-      zero_shot_response: result.response.text(),
-    });
-
+    res.json({ idea: userIdea, zero_shot_response: result.response.text() });
   } catch (err) {
     console.error("Error in Zero Shot:", err);
     res.status(500).json({ error: err.message });
@@ -43,12 +36,9 @@ app.post("/one-shot", async (req, res) => {
   try {
     const { userIdea } = req.body;
 
-    if (!userIdea) {
-      return res.status(400).json({ error: "Please provide userIdea" });
-    }
+    if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
     const prompt = `
 Example:
 Input: "AI-powered fitness tracker for pets"
@@ -64,11 +54,7 @@ Output:
 
     const result = await model.generateContent(prompt);
 
-    res.json({
-      idea: userIdea,
-      one_shot_response: result.response.text(),
-    });
-
+    res.json({ idea: userIdea, one_shot_response: result.response.text() });
   } catch (err) {
     console.error("Error in One Shot:", err);
     res.status(500).json({ error: err.message });
@@ -80,12 +66,9 @@ app.post("/multi-shot", async (req, res) => {
   try {
     const { userIdea } = req.body;
 
-    if (!userIdea) {
-      return res.status(400).json({ error: "Please provide userIdea" });
-    }
+    if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
     const prompt = `
 Example 1:
 Input: "AI-powered fitness tracker for pets"
@@ -115,11 +98,7 @@ Output:
 
     const result = await model.generateContent(prompt);
 
-    res.json({
-      idea: userIdea,
-      multi_shot_response: result.response.text(),
-    });
-
+    res.json({ idea: userIdea, multi_shot_response: result.response.text() });
   } catch (err) {
     console.error("Error in Multi Shot:", err);
     res.status(500).json({ error: err.message });
@@ -131,12 +110,9 @@ app.post("/cot-prompt", async (req, res) => {
   try {
     const { userIdea } = req.body;
 
-    if (!userIdea) {
-      return res.status(400).json({ error: "Please provide userIdea" });
-    }
+    if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
     const prompt = `
 You are a startup mentor.  
 Analyze this idea step by step (reasoning), then provide the final summary.
@@ -150,11 +126,7 @@ Final Answer: [Validation, Competitors, Roadmap]
 
     const result = await model.generateContent(prompt);
 
-    res.json({
-      idea: userIdea,
-      cot_response: result.response.text(),
-    });
-
+    res.json({ idea: userIdea, cot_response: result.response.text() });
   } catch (err) {
     console.error("Error in COT Prompting:", err);
     res.status(500).json({ error: err.message });
@@ -166,13 +138,10 @@ app.post("/dynamic-prompt", async (req, res) => {
   try {
     const { userIdea, category, detailLevel } = req.body;
 
-    if (!userIdea) {
-      return res.status(400).json({ error: "Please provide userIdea" });
-    }
+    if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    // Build dynamic prompt
     let prompt = `Analyze this startup idea: "${userIdea}".`;
     if (category) prompt += `\nCategory: ${category}.`;
     if (detailLevel === "detailed") {
@@ -189,13 +158,51 @@ app.post("/dynamic-prompt", async (req, res) => {
       detailLevel: detailLevel || "summary",
       dynamic_prompt_response: result.response.text(),
     });
-
   } catch (err) {
     console.error("Error in Dynamic Prompt:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
+// ================== SYSTEM & USER PROMPT ==================
+app.post("/system-user-prompt", async (req, res) => {
+  try {
+    const { userIdea } = req.body;
+
+    if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const systemPrompt = `
+You are InnoPilot – an AI startup mentor.
+Always provide structured, clear, and professional guidance.
+Use the RTFC framework (Role, Task, Format, Context).
+- Role: Mentor for startup founders
+- Task: Validate startup ideas
+- Format: Validation, Competitors, Roadmap
+- Context: Help student/entrepreneur understand feasibility
+    `;
+
+    const userPrompt = `Validate the following startup idea:
+Startup Idea: ${userIdea}`;
+
+    // Gemini SDK format
+    const result = await model.generateContent({
+      contents: [
+        { role: "user", parts: [{ text: systemPrompt }] },
+        { role: "user", parts: [{ text: userPrompt }] }
+      ]
+    });
+
+    res.json({
+      idea: userIdea,
+      system_user_prompt_response: result.response.text(),
+    });
+  } catch (err) {
+    console.error("Error in System & User Prompt:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // ================== START SERVER ==================
 const PORT = process.env.PORT || 5000;
