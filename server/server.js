@@ -1,4 +1,4 @@
-import express from "express"; 
+import express from "express";
 import dotenv from "dotenv";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
@@ -86,7 +86,6 @@ app.post("/multi-shot", async (req, res) => {
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    // Multi-shot = provide MULTIPLE examples to guide formatting + tone
     const prompt = `
 Example 1:
 Input: "AI-powered fitness tracker for pets"
@@ -123,6 +122,41 @@ Output:
 
   } catch (err) {
     console.error("Error in Multi Shot:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ================== CHAIN OF THOUGHT PROMPTING ==================
+app.post("/cot-prompt", async (req, res) => {
+  try {
+    const { userIdea } = req.body;
+
+    if (!userIdea) {
+      return res.status(400).json({ error: "Please provide userIdea" });
+    }
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    const prompt = `
+You are a startup mentor.  
+Analyze this idea step by step (reasoning), then provide the final summary.
+
+Startup Idea: "${userIdea}"
+
+Format:
+Reasoning: [Detailed thought process step by step]
+Final Answer: [Validation, Competitors, Roadmap]
+    `;
+
+    const result = await model.generateContent(prompt);
+
+    res.json({
+      idea: userIdea,
+      cot_response: result.response.text(),
+    });
+
+  } catch (err) {
+    console.error("Error in COT Prompting:", err);
     res.status(500).json({ error: err.message });
   }
 });
