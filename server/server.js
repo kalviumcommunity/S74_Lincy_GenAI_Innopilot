@@ -161,6 +161,42 @@ Final Answer: [Validation, Competitors, Roadmap]
   }
 });
 
+// ================== DYNAMIC PROMPTING ==================
+app.post("/dynamic-prompt", async (req, res) => {
+  try {
+    const { userIdea, category, detailLevel } = req.body;
+
+    if (!userIdea) {
+      return res.status(400).json({ error: "Please provide userIdea" });
+    }
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    // Build dynamic prompt
+    let prompt = `Analyze this startup idea: "${userIdea}".`;
+    if (category) prompt += `\nCategory: ${category}.`;
+    if (detailLevel === "detailed") {
+      prompt += `\nGive a very detailed validation, competitor analysis, and step-by-step roadmap.`;
+    } else {
+      prompt += `\nGive a short summary validation and roadmap.`;
+    }
+
+    const result = await model.generateContent(prompt);
+
+    res.json({
+      idea: userIdea,
+      category: category || "Not provided",
+      detailLevel: detailLevel || "summary",
+      dynamic_prompt_response: result.response.text(),
+    });
+
+  } catch (err) {
+    console.error("Error in Dynamic Prompt:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // ================== START SERVER ==================
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`✅ Innopilot running on port ${PORT}`));
