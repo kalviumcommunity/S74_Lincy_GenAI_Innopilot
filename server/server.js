@@ -1,4 +1,4 @@
-import express from "express";
+import express from "express"; 
 import dotenv from "dotenv";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
@@ -21,7 +21,6 @@ app.post("/zero-shot", async (req, res) => {
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    // Zero-shot = no examples, just an instruction
     const prompt = `Validate this startup idea in detail. 
     Cover feasibility, potential competitors, and a basic execution roadmap.
     Startup Idea: ${userIdea}`;
@@ -50,7 +49,6 @@ app.post("/one-shot", async (req, res) => {
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    // One-shot = provide ONE example to guide the format
     const prompt = `
 Example:
 Input: "AI-powered fitness tracker for pets"
@@ -73,6 +71,58 @@ Output:
 
   } catch (err) {
     console.error("Error in One Shot:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ================== MULTI SHOT PROMPTING ==================
+app.post("/multi-shot", async (req, res) => {
+  try {
+    const { userIdea } = req.body;
+
+    if (!userIdea) {
+      return res.status(400).json({ error: "Please provide userIdea" });
+    }
+
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    // Multi-shot = provide MULTIPLE examples to guide formatting + tone
+    const prompt = `
+Example 1:
+Input: "AI-powered fitness tracker for pets"
+Output:
+Validation: Feasible, growing demand in pet tech
+Competitors: FitBark, Whistle
+Roadmap: Build MVP collar device → Launch beta → Partner with vets
+
+Example 2:
+Input: "Blockchain-based land registry system"
+Output:
+Validation: Strong potential in transparency & fraud prevention
+Competitors: Bitland, Ubitquity
+Roadmap: Build pilot with local govt → Test with small community → Scale nationwide
+
+Example 3:
+Input: "Virtual reality museum tours"
+Output:
+Validation: Feasible with increasing VR adoption
+Competitors: The Louvre VR, Google Arts & Culture
+Roadmap: Partner with museums → Build VR content → Launch paid global access
+
+Now analyze the following startup idea in the same format:
+Input: "${userIdea}"
+Output:
+    `;
+
+    const result = await model.generateContent(prompt);
+
+    res.json({
+      idea: userIdea,
+      multi_shot_response: result.response.text(),
+    });
+
+  } catch (err) {
+    console.error("Error in Multi Shot:", err);
     res.status(500).json({ error: err.message });
   }
 });
