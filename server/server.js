@@ -13,16 +13,20 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 // ================== ZERO SHOT PROMPTING ==================
 app.post("/zero-shot", async (req, res) => {
   try {
-    const { userIdea } = req.body;
+    const { userIdea, topP } = req.body;
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      topP: topP !== undefined ? topP : 0.9
+    });
+
     const prompt = `Validate this startup idea in detail. 
-    Cover feasibility, potential competitors, and a basic execution roadmap.
-    Startup Idea: ${userIdea}`;
+Cover feasibility, potential competitors, and a basic execution roadmap.
+Startup Idea: ${userIdea}`;
 
     const result = await model.generateContent(prompt);
-    res.json({ idea: userIdea, zero_shot_response: result.response.text() });
+    res.json({ idea: userIdea, top_p: topP || 0.9, zero_shot_response: result.response.text() });
   } catch (err) {
     console.error("Error in Zero Shot:", err);
     res.status(500).json({ error: err.message });
@@ -32,10 +36,14 @@ app.post("/zero-shot", async (req, res) => {
 // ================== ONE SHOT PROMPTING ==================
 app.post("/one-shot", async (req, res) => {
   try {
-    const { userIdea } = req.body;
+    const { userIdea, topP } = req.body;
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      topP: topP !== undefined ? topP : 0.9
+    });
+
     const prompt = `
 Example:
 Input: "AI-powered fitness tracker for pets"
@@ -50,7 +58,7 @@ Output:
     `;
 
     const result = await model.generateContent(prompt);
-    res.json({ idea: userIdea, one_shot_response: result.response.text() });
+    res.json({ idea: userIdea, top_p: topP || 0.9, one_shot_response: result.response.text() });
   } catch (err) {
     console.error("Error in One Shot:", err);
     res.status(500).json({ error: err.message });
@@ -60,10 +68,14 @@ Output:
 // ================== MULTI SHOT PROMPTING ==================
 app.post("/multi-shot", async (req, res) => {
   try {
-    const { userIdea } = req.body;
+    const { userIdea, topP } = req.body;
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      topP: topP !== undefined ? topP : 0.9
+    });
+
     const prompt = `
 Example 1:
 Input: "AI-powered fitness tracker for pets"
@@ -92,7 +104,7 @@ Output:
     `;
 
     const result = await model.generateContent(prompt);
-    res.json({ idea: userIdea, multi_shot_response: result.response.text() });
+    res.json({ idea: userIdea, top_p: topP || 0.9, multi_shot_response: result.response.text() });
   } catch (err) {
     console.error("Error in Multi Shot:", err);
     res.status(500).json({ error: err.message });
@@ -102,10 +114,14 @@ Output:
 // ================== CHAIN OF THOUGHT PROMPTING ==================
 app.post("/cot-prompt", async (req, res) => {
   try {
-    const { userIdea } = req.body;
+    const { userIdea, topP } = req.body;
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      topP: topP !== undefined ? topP : 0.9
+    });
+
     const prompt = `
 You are a startup mentor.  
 Analyze this idea step by step (reasoning), then provide the final summary.
@@ -118,7 +134,7 @@ Final Answer: [Validation, Competitors, Roadmap]
     `;
 
     const result = await model.generateContent(prompt);
-    res.json({ idea: userIdea, cot_response: result.response.text() });
+    res.json({ idea: userIdea, top_p: topP || 0.9, cot_response: result.response.text() });
   } catch (err) {
     console.error("Error in COT Prompting:", err);
     res.status(500).json({ error: err.message });
@@ -128,10 +144,13 @@ Final Answer: [Validation, Competitors, Roadmap]
 // ================== DYNAMIC PROMPTING ==================
 app.post("/dynamic-prompt", async (req, res) => {
   try {
-    const { userIdea, category, detailLevel } = req.body;
+    const { userIdea, category, detailLevel, topP } = req.body;
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      topP: topP !== undefined ? topP : 0.9
+    });
 
     let prompt = `Analyze this startup idea: "${userIdea}".`;
     if (category) prompt += `\nCategory: ${category}.`;
@@ -146,6 +165,7 @@ app.post("/dynamic-prompt", async (req, res) => {
       idea: userIdea,
       category: category || "Not provided",
       detailLevel: detailLevel || "summary",
+      top_p: topP || 0.9,
       dynamic_prompt_response: result.response.text(),
     });
   } catch (err) {
@@ -157,10 +177,13 @@ app.post("/dynamic-prompt", async (req, res) => {
 // ================== SYSTEM & USER PROMPT ==================
 app.post("/system-user-prompt", async (req, res) => {
   try {
-    const { userIdea } = req.body;
+    const { userIdea, topP } = req.body;
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      topP: topP !== undefined ? topP : 0.9
+    });
 
     const systemPrompt = `
 You are InnoPilot – an AI startup mentor.
@@ -184,6 +207,7 @@ Startup Idea: ${userIdea}`;
 
     res.json({
       idea: userIdea,
+      top_p: topP || 0.9,
       system_user_prompt_response: result.response.text(),
     });
   } catch (err) {
@@ -195,12 +219,13 @@ Startup Idea: ${userIdea}`;
 // ================== TEMPERATURE PROMPTING ==================
 app.post("/temperature-prompt", async (req, res) => {
   try {
-    const { userIdea, temperature } = req.body;
+    const { userIdea, temperature, topP } = req.body;
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
     const model = genAI.getGenerativeModel({
       model: "gemini-1.5-flash",
-      temperature: temperature !== undefined ? temperature : 0.7 // default
+      temperature: temperature !== undefined ? temperature : 0.7,
+      topP: topP !== undefined ? topP : 0.9
     });
 
     const prompt = `Analyze this startup idea creatively: "${userIdea}". 
@@ -210,6 +235,7 @@ Higher temperature means more creative and diverse responses, lower temperature 
     res.json({
       idea: userIdea,
       temperature: temperature || 0.7,
+      top_p: topP || 0.9,
       temperature_response: result.response.text(),
     });
   } catch (err) {
