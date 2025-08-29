@@ -18,6 +18,19 @@ const getModelConfig = ({ topP, topK, temperature }) => ({
   temperature: temperature !== undefined ? temperature : 0.7
 });
 
+// Helper function to wrap prompt in structured output instruction
+const withStructuredOutput = (prompt) => `
+${prompt}
+
+Return the response as a JSON object with keys:
+{
+  "Validation": "",
+  "Competitors": [],
+  "Roadmap": ""
+}
+Do not include any text outside this JSON.
+`;
+
 // ================== ZERO SHOT PROMPTING ==================
 app.post("/zero-shot", async (req, res) => {
   try {
@@ -25,12 +38,9 @@ app.post("/zero-shot", async (req, res) => {
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
     const model = genAI.getGenerativeModel(getModelConfig({ topP, topK, temperature }));
-
-    const prompt = `Validate this startup idea in detail. 
-Cover feasibility, potential competitors, and a basic execution roadmap.
-Startup Idea: ${userIdea}`;
-
+    const prompt = withStructuredOutput(`Validate this startup idea in detail. Startup Idea: ${userIdea}`);
     const result = await model.generateContent(prompt);
+
     res.json({ idea: userIdea, top_p: topP || 0.9, top_k: topK || 50, temperature: temperature || 0.7, zero_shot_response: result.response.text() });
   } catch (err) {
     console.error("Error in Zero Shot:", err);
@@ -45,21 +55,22 @@ app.post("/one-shot", async (req, res) => {
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
     const model = genAI.getGenerativeModel(getModelConfig({ topP, topK, temperature }));
-
-    const prompt = `
+    const prompt = withStructuredOutput(`
 Example:
 Input: "AI-powered fitness tracker for pets"
 Output:
-Validation: Feasible, growing demand in pet tech
-Competitors: FitBark, Whistle
-Roadmap: Build MVP collar device → Launch beta → Partner with vets
+{
+  "Validation": "Feasible, growing demand in pet tech",
+  "Competitors": ["FitBark", "Whistle"],
+  "Roadmap": "Build MVP collar device → Launch beta → Partner with vets"
+}
 
-Now analyze the following startup idea in the same format:
+Now analyze the following startup idea:
 Input: "${userIdea}"
 Output:
-    `;
-
+`);
     const result = await model.generateContent(prompt);
+
     res.json({ idea: userIdea, top_p: topP || 0.9, top_k: topK || 50, temperature: temperature || 0.7, one_shot_response: result.response.text() });
   } catch (err) {
     console.error("Error in One Shot:", err);
@@ -74,35 +85,40 @@ app.post("/multi-shot", async (req, res) => {
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
     const model = genAI.getGenerativeModel(getModelConfig({ topP, topK, temperature }));
-
-    const prompt = `
+    const prompt = withStructuredOutput(`
 Example 1:
 Input: "AI-powered fitness tracker for pets"
 Output:
-Validation: Feasible, growing demand in pet tech
-Competitors: FitBark, Whistle
-Roadmap: Build MVP collar device → Launch beta → Partner with vets
+{
+  "Validation": "Feasible, growing demand in pet tech",
+  "Competitors": ["FitBark", "Whistle"],
+  "Roadmap": "Build MVP collar device → Launch beta → Partner with vets"
+}
 
 Example 2:
 Input: "Blockchain-based land registry system"
 Output:
-Validation: Strong potential in transparency & fraud prevention
-Competitors: Bitland, Ubitquity
-Roadmap: Build pilot with local govt → Test with small community → Scale nationwide
+{
+  "Validation": "Strong potential in transparency & fraud prevention",
+  "Competitors": ["Bitland", "Ubitquity"],
+  "Roadmap": "Build pilot with local govt → Test with small community → Scale nationwide"
+}
 
 Example 3:
 Input: "Virtual reality museum tours"
 Output:
-Validation: Feasible with increasing VR adoption
-Competitors: The Louvre VR, Google Arts & Culture
-Roadmap: Partner with museums → Build VR content → Launch paid global access
+{
+  "Validation": "Feasible with increasing VR adoption",
+  "Competitors": ["The Louvre VR", "Google Arts & Culture"],
+  "Roadmap": "Partner with museums → Build VR content → Launch paid global access"
+}
 
-Now analyze the following startup idea in the same format:
+Now analyze the following startup idea:
 Input: "${userIdea}"
 Output:
-    `;
-
+`);
     const result = await model.generateContent(prompt);
+
     res.json({ idea: userIdea, top_p: topP || 0.9, top_k: topK || 50, temperature: temperature || 0.7, multi_shot_response: result.response.text() });
   } catch (err) {
     console.error("Error in Multi Shot:", err);
@@ -117,19 +133,18 @@ app.post("/cot-prompt", async (req, res) => {
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
     const model = genAI.getGenerativeModel(getModelConfig({ topP, topK, temperature }));
-
-    const prompt = `
-You are a startup mentor.  
-Analyze this idea step by step (reasoning), then provide the final summary.
+    const prompt = withStructuredOutput(`
+You are a startup mentor.
+Analyze this idea step by step, then provide the final summary.
 
 Startup Idea: "${userIdea}"
 
 Format:
 Reasoning: [Detailed thought process step by step]
-Final Answer: [Validation, Competitors, Roadmap]
-    `;
-
+Final Answer:
+`);
     const result = await model.generateContent(prompt);
+
     res.json({ idea: userIdea, top_p: topP || 0.9, top_k: topK || 50, temperature: temperature || 0.7, cot_response: result.response.text() });
   } catch (err) {
     console.error("Error in COT Prompting:", err);
@@ -144,16 +159,14 @@ app.post("/dynamic-prompt", async (req, res) => {
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
     const model = genAI.getGenerativeModel(getModelConfig({ topP, topK, temperature }));
-
     let prompt = `Analyze this startup idea: "${userIdea}".`;
     if (category) prompt += `\nCategory: ${category}.`;
-    if (detailLevel === "detailed") {
-      prompt += `\nGive a very detailed validation, competitor analysis, and step-by-step roadmap.`;
-    } else {
-      prompt += `\nGive a short summary validation and roadmap.`;
-    }
+    if (detailLevel === "detailed") prompt += `\nGive a very detailed validation, competitor analysis, and step-by-step roadmap.`;
+    else prompt += `\nGive a short summary validation and roadmap.`;
 
+    prompt = withStructuredOutput(prompt);
     const result = await model.generateContent(prompt);
+
     res.json({
       idea: userIdea,
       category: category || "Not provided",
@@ -185,17 +198,13 @@ Use the RTFC framework (Role, Task, Format, Context).
 - Task: Validate startup ideas
 - Format: Validation, Competitors, Roadmap
 - Context: Help student/entrepreneur understand feasibility
-    `;
+`;
 
     const userPrompt = `Validate the following startup idea:
 Startup Idea: ${userIdea}`;
 
-    const result = await model.generateContent({
-      contents: [
-        { role: "user", parts: [{ text: systemPrompt }] },
-        { role: "user", parts: [{ text: userPrompt }] }
-      ]
-    });
+    const prompt = withStructuredOutput(`${systemPrompt}\n${userPrompt}`);
+    const result = await model.generateContent({ contents: [{ role: "user", parts: [{ text: prompt }] }] });
 
     res.json({
       idea: userIdea,
@@ -217,9 +226,7 @@ app.post("/temperature-prompt", async (req, res) => {
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
     const model = genAI.getGenerativeModel(getModelConfig({ topP, topK, temperature }));
-
-    const prompt = `Analyze this startup idea creatively: "${userIdea}". 
-Higher temperature means more creative and diverse responses, lower temperature means more deterministic.`;
+    const prompt = withStructuredOutput(`Analyze this startup idea creatively: "${userIdea}". Higher temperature means more creative responses.`);
 
     const result = await model.generateContent(prompt);
     res.json({
