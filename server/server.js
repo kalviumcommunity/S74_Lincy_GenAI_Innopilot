@@ -14,7 +14,6 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 app.post("/zero-shot", async (req, res) => {
   try {
     const { userIdea } = req.body;
-
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -23,7 +22,6 @@ app.post("/zero-shot", async (req, res) => {
     Startup Idea: ${userIdea}`;
 
     const result = await model.generateContent(prompt);
-
     res.json({ idea: userIdea, zero_shot_response: result.response.text() });
   } catch (err) {
     console.error("Error in Zero Shot:", err);
@@ -35,7 +33,6 @@ app.post("/zero-shot", async (req, res) => {
 app.post("/one-shot", async (req, res) => {
   try {
     const { userIdea } = req.body;
-
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -53,7 +50,6 @@ Output:
     `;
 
     const result = await model.generateContent(prompt);
-
     res.json({ idea: userIdea, one_shot_response: result.response.text() });
   } catch (err) {
     console.error("Error in One Shot:", err);
@@ -65,7 +61,6 @@ Output:
 app.post("/multi-shot", async (req, res) => {
   try {
     const { userIdea } = req.body;
-
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -97,7 +92,6 @@ Output:
     `;
 
     const result = await model.generateContent(prompt);
-
     res.json({ idea: userIdea, multi_shot_response: result.response.text() });
   } catch (err) {
     console.error("Error in Multi Shot:", err);
@@ -109,7 +103,6 @@ Output:
 app.post("/cot-prompt", async (req, res) => {
   try {
     const { userIdea } = req.body;
-
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -125,7 +118,6 @@ Final Answer: [Validation, Competitors, Roadmap]
     `;
 
     const result = await model.generateContent(prompt);
-
     res.json({ idea: userIdea, cot_response: result.response.text() });
   } catch (err) {
     console.error("Error in COT Prompting:", err);
@@ -137,7 +129,6 @@ Final Answer: [Validation, Competitors, Roadmap]
 app.post("/dynamic-prompt", async (req, res) => {
   try {
     const { userIdea, category, detailLevel } = req.body;
-
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -151,7 +142,6 @@ app.post("/dynamic-prompt", async (req, res) => {
     }
 
     const result = await model.generateContent(prompt);
-
     res.json({
       idea: userIdea,
       category: category || "Not provided",
@@ -168,7 +158,6 @@ app.post("/dynamic-prompt", async (req, res) => {
 app.post("/system-user-prompt", async (req, res) => {
   try {
     const { userIdea } = req.body;
-
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
@@ -186,7 +175,6 @@ Use the RTFC framework (Role, Task, Format, Context).
     const userPrompt = `Validate the following startup idea:
 Startup Idea: ${userIdea}`;
 
-    // Gemini SDK format
     const result = await model.generateContent({
       contents: [
         { role: "user", parts: [{ text: systemPrompt }] },
@@ -200,6 +188,32 @@ Startup Idea: ${userIdea}`;
     });
   } catch (err) {
     console.error("Error in System & User Prompt:", err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ================== TEMPERATURE PROMPTING ==================
+app.post("/temperature-prompt", async (req, res) => {
+  try {
+    const { userIdea, temperature } = req.body;
+    if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
+
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      temperature: temperature !== undefined ? temperature : 0.7 // default
+    });
+
+    const prompt = `Analyze this startup idea creatively: "${userIdea}". 
+Higher temperature means more creative and diverse responses, lower temperature means more deterministic.`;
+
+    const result = await model.generateContent(prompt);
+    res.json({
+      idea: userIdea,
+      temperature: temperature || 0.7,
+      temperature_response: result.response.text(),
+    });
+  } catch (err) {
+    console.error("Error in Temperature Prompting:", err);
     res.status(500).json({ error: err.message });
   }
 });
