@@ -10,23 +10,28 @@ app.use(express.json());
 // Init Google AI SDK
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 
+// Helper function to get model config
+const getModelConfig = ({ topP, topK, temperature }) => ({
+  model: "gemini-1.5-flash",
+  topP: topP !== undefined ? topP : 0.9,
+  topK: topK !== undefined ? topK : 50,
+  temperature: temperature !== undefined ? temperature : 0.7
+});
+
 // ================== ZERO SHOT PROMPTING ==================
 app.post("/zero-shot", async (req, res) => {
   try {
-    const { userIdea, topP } = req.body;
+    const { userIdea, topP, topK, temperature } = req.body;
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      topP: topP !== undefined ? topP : 0.9
-    });
+    const model = genAI.getGenerativeModel(getModelConfig({ topP, topK, temperature }));
 
     const prompt = `Validate this startup idea in detail. 
 Cover feasibility, potential competitors, and a basic execution roadmap.
 Startup Idea: ${userIdea}`;
 
     const result = await model.generateContent(prompt);
-    res.json({ idea: userIdea, top_p: topP || 0.9, zero_shot_response: result.response.text() });
+    res.json({ idea: userIdea, top_p: topP || 0.9, top_k: topK || 50, temperature: temperature || 0.7, zero_shot_response: result.response.text() });
   } catch (err) {
     console.error("Error in Zero Shot:", err);
     res.status(500).json({ error: err.message });
@@ -36,13 +41,10 @@ Startup Idea: ${userIdea}`;
 // ================== ONE SHOT PROMPTING ==================
 app.post("/one-shot", async (req, res) => {
   try {
-    const { userIdea, topP } = req.body;
+    const { userIdea, topP, topK, temperature } = req.body;
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      topP: topP !== undefined ? topP : 0.9
-    });
+    const model = genAI.getGenerativeModel(getModelConfig({ topP, topK, temperature }));
 
     const prompt = `
 Example:
@@ -58,7 +60,7 @@ Output:
     `;
 
     const result = await model.generateContent(prompt);
-    res.json({ idea: userIdea, top_p: topP || 0.9, one_shot_response: result.response.text() });
+    res.json({ idea: userIdea, top_p: topP || 0.9, top_k: topK || 50, temperature: temperature || 0.7, one_shot_response: result.response.text() });
   } catch (err) {
     console.error("Error in One Shot:", err);
     res.status(500).json({ error: err.message });
@@ -68,13 +70,10 @@ Output:
 // ================== MULTI SHOT PROMPTING ==================
 app.post("/multi-shot", async (req, res) => {
   try {
-    const { userIdea, topP } = req.body;
+    const { userIdea, topP, topK, temperature } = req.body;
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      topP: topP !== undefined ? topP : 0.9
-    });
+    const model = genAI.getGenerativeModel(getModelConfig({ topP, topK, temperature }));
 
     const prompt = `
 Example 1:
@@ -104,7 +103,7 @@ Output:
     `;
 
     const result = await model.generateContent(prompt);
-    res.json({ idea: userIdea, top_p: topP || 0.9, multi_shot_response: result.response.text() });
+    res.json({ idea: userIdea, top_p: topP || 0.9, top_k: topK || 50, temperature: temperature || 0.7, multi_shot_response: result.response.text() });
   } catch (err) {
     console.error("Error in Multi Shot:", err);
     res.status(500).json({ error: err.message });
@@ -114,13 +113,10 @@ Output:
 // ================== CHAIN OF THOUGHT PROMPTING ==================
 app.post("/cot-prompt", async (req, res) => {
   try {
-    const { userIdea, topP } = req.body;
+    const { userIdea, topP, topK, temperature } = req.body;
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      topP: topP !== undefined ? topP : 0.9
-    });
+    const model = genAI.getGenerativeModel(getModelConfig({ topP, topK, temperature }));
 
     const prompt = `
 You are a startup mentor.  
@@ -134,7 +130,7 @@ Final Answer: [Validation, Competitors, Roadmap]
     `;
 
     const result = await model.generateContent(prompt);
-    res.json({ idea: userIdea, top_p: topP || 0.9, cot_response: result.response.text() });
+    res.json({ idea: userIdea, top_p: topP || 0.9, top_k: topK || 50, temperature: temperature || 0.7, cot_response: result.response.text() });
   } catch (err) {
     console.error("Error in COT Prompting:", err);
     res.status(500).json({ error: err.message });
@@ -144,13 +140,10 @@ Final Answer: [Validation, Competitors, Roadmap]
 // ================== DYNAMIC PROMPTING ==================
 app.post("/dynamic-prompt", async (req, res) => {
   try {
-    const { userIdea, category, detailLevel, topP } = req.body;
+    const { userIdea, category, detailLevel, topP, topK, temperature } = req.body;
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      topP: topP !== undefined ? topP : 0.9
-    });
+    const model = genAI.getGenerativeModel(getModelConfig({ topP, topK, temperature }));
 
     let prompt = `Analyze this startup idea: "${userIdea}".`;
     if (category) prompt += `\nCategory: ${category}.`;
@@ -166,6 +159,8 @@ app.post("/dynamic-prompt", async (req, res) => {
       category: category || "Not provided",
       detailLevel: detailLevel || "summary",
       top_p: topP || 0.9,
+      top_k: topK || 50,
+      temperature: temperature || 0.7,
       dynamic_prompt_response: result.response.text(),
     });
   } catch (err) {
@@ -177,13 +172,10 @@ app.post("/dynamic-prompt", async (req, res) => {
 // ================== SYSTEM & USER PROMPT ==================
 app.post("/system-user-prompt", async (req, res) => {
   try {
-    const { userIdea, topP } = req.body;
+    const { userIdea, topP, topK, temperature } = req.body;
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      topP: topP !== undefined ? topP : 0.9
-    });
+    const model = genAI.getGenerativeModel(getModelConfig({ topP, topK, temperature }));
 
     const systemPrompt = `
 You are InnoPilot – an AI startup mentor.
@@ -208,6 +200,8 @@ Startup Idea: ${userIdea}`;
     res.json({
       idea: userIdea,
       top_p: topP || 0.9,
+      top_k: topK || 50,
+      temperature: temperature || 0.7,
       system_user_prompt_response: result.response.text(),
     });
   } catch (err) {
@@ -219,14 +213,10 @@ Startup Idea: ${userIdea}`;
 // ================== TEMPERATURE PROMPTING ==================
 app.post("/temperature-prompt", async (req, res) => {
   try {
-    const { userIdea, temperature, topP } = req.body;
+    const { userIdea, temperature, topP, topK } = req.body;
     if (!userIdea) return res.status(400).json({ error: "Please provide userIdea" });
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      temperature: temperature !== undefined ? temperature : 0.7,
-      topP: topP !== undefined ? topP : 0.9
-    });
+    const model = genAI.getGenerativeModel(getModelConfig({ topP, topK, temperature }));
 
     const prompt = `Analyze this startup idea creatively: "${userIdea}". 
 Higher temperature means more creative and diverse responses, lower temperature means more deterministic.`;
@@ -236,6 +226,7 @@ Higher temperature means more creative and diverse responses, lower temperature 
       idea: userIdea,
       temperature: temperature || 0.7,
       top_p: topP || 0.9,
+      top_k: topK || 50,
       temperature_response: result.response.text(),
     });
   } catch (err) {
